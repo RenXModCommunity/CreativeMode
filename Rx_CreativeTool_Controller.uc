@@ -58,14 +58,12 @@ reliable server function ServerSandboxSpawn(string ClassName)
 	if (NewClass != None)
 	{
 		if(NewClass == class'Renx_Game.Rx_Weapon_DeployedBeacon') 
-		{
 			For(i = 0; i < SpawnedActors.Length; i++)
 				if (SpawnedActors[i].IsA('Rx_Weapon_DeployedBeacon'))
 				{
-					CTextMessage("You can only have one beacon spawned at once.", 'Red');
+					CTextMessage("You can only have one beacon spawned at once", 'Red');
 					break;
 				}
-		}
 
 		if (Pawn != None)
 			SpawnLoc = Pawn.Location;
@@ -82,13 +80,15 @@ reliable server function ServerSandboxSpawn(string ClassName)
 		}
 		else if(A.IsA('UTVehicle'))
 			UTVehicle(A).SetTeamNum(GetTeamNum());
+
+		`WorldInfoObject.Game.Broadcast(None, GetHumanReadableName()@"spawned a"@A.GetHumanReadableName(), 'SSay');
 	}
 }
 
 exec function SandboxKillOwned(optional string ClassName)
 {
 	ServerSandboxKillOwned(ClassName); 
-	CTextMessage("Removed all your spawns.", 'Green');
+	CTextMessage("Removed all your spawns", 'Green');
 } 
 
 reliable server function ServerSandboxKillOwned(optional string ClassName)
@@ -127,8 +127,16 @@ reliable server function ServerGiveCreds(Rx_PRI Receiver, optional float Credits
 {
 	if (PlayerReplicationInfo.bAdmin)
 		Receiver.AddCredits(Credits);
+	else
+	{
+		AccessDenied();
+		return;
+	}
 
-	else AccessDenied();
+	if (Receiver == Rx_PRI(PlayerReplicationInfo))
+		`WorldInfoObject.Game.Broadcast(None, GetHumanReadableName()@"gave themself credits", 'SSay');
+	else
+		`WorldInfoObject.Game.Broadcast(None, GetHumanReadableName()@"gave"@Receiver.GetHumanReadableName()@"credits", 'SSay');
 }
 
 exec function GivePromo(optional string PlayerName)
@@ -158,8 +166,9 @@ reliable server function ServerGivePromo(Rx_PRI Receiver)
 {
 	if (PlayerReplicationInfo.bAdmin)
 	{
-		Receiver.AddVP(Rx_Game(`WorldInfoObject.Game).default.VPMilestones[Rx_PRI(PlayerReplicationInfo).VRank] - Rx_PRI(PlayerReplicationInfo).Veterancy_Points);
-		CTextMessage("Promoted"@Receiver.GetHumanReadableName()$".");
+		Receiver.AddVP(Rx_Game(`WorldInfoObject.Game).default.VPMilestones[Receiver.VRank] - Receiver.Veterancy_Points);
+		CTextMessage("Promoted"@Receiver.GetHumanReadableName());
+		`WorldInfoObject.Game.Broadcast(None, GetHumanReadableName()@"promoted"@Receiver.GetHumanReadableName(), 'SSay');
 	}
 
 	else AccessDenied();
@@ -184,9 +193,15 @@ reliable server function ServerLockHealth()
 		}
 	
 		if (isLocked)
+		{
 			CTextMessage("Locked building HP", 'Green');
+			`WorldInfoObject.Game.Broadcast(None, GetHumanReadableName()@"locked building HP", 'SSay');
+		}
 		else
+		{
 			CTextMessage("Unlocked building HP", 'Green');
+			`WorldInfoObject.Game.Broadcast(None, GetHumanReadableName()@"unlocked building HP", 'SSay');
+		}
 	}
 
 	else AccessDenied();
@@ -234,7 +249,7 @@ exec function GiveGod(optional string PlayerName)
 		ServerGiveGod(Rx_PRI(PlayerReplicationInfo));
 }
 
-reliable server function bool ServerGiveGod(Rx_PRI Receiver)
+reliable server function ServerGiveGod(Rx_PRI Receiver)
 {
 	local Rx_Controller C;
 
@@ -245,12 +260,34 @@ reliable server function bool ServerGiveGod(Rx_PRI Receiver)
 
 		C.bGodMode = !C.bGodMode;
 
-		if (C.bGodMode)
-   			C.CTextMessage("You are no longer a god.");
-   		else
-   			C.CTextMessage("You are now a god.");
+		if (Receiver == Rx_PRI(C.PlayerReplicationInfo))
+		{
+			if (C.bGodMode)
+			{
+   				C.CTextMessage("You are now a god");
+   				`WorldInfoObject.Game.Broadcast(None, GetHumanReadableName()@"gave themself god mode", 'SSay');
+			}
+   			else
+   			{
+   				C.CTextMessage("You are no longer a god");
+   				`WorldInfoObject.Game.Broadcast(None, GetHumanReadableName()@"removed their own god mode", 'SSay');
+   			}
 
-		return C.bGodMode;
+   			return;
+   		}
+
+		if (C.bGodMode)
+		{
+   			CTextMessage(C.GetHumanReadableName()@"is now a god");
+   			C.CTextMessage("You are now a god");
+   			`WorldInfoObject.Game.Broadcast(None, GetHumanReadableName()@"set"@C.GetHumanReadableName()@"to god mode", 'SSay');
+		}
+   		else
+   		{
+   			CTextMessage(C.GetHumanReadableName()@"is no longer a god");
+   			C.CTextMessage("You are no longer a god");
+   			`WorldInfoObject.Game.Broadcast(None, GetHumanReadableName()@"disabled"@C.GetHumanReadableName()$"'s god mode", 'SSay');
+   		}
 	}
 
 	else AccessDenied();
@@ -279,6 +316,7 @@ reliable server function ServerDestroyDefences()
 			Rx_Building_Team_Internals(AdvDef.BuildingInternals).PowerLost();
 
 		CTextMessage("Disabled all defences", 'Green');
+		`WorldInfoObject.Game.Broadcast(None, GetHumanReadableName()@"disabled base defences", 'SSay');		
 	}
 
 	else AccessDenied();
@@ -286,35 +324,50 @@ reliable server function ServerDestroyDefences()
 
 function AccessDenied()
 {
-	CTextMessage("Access denied.", 'Red');
+	CTextMessage("Access denied", 'Red');
 }
 
 state PlayerFlying
 {
-ignores SeePlayer, HearNoise, Bump;
+	ignores SeePlayer, HearNoise, Bump;
+	
+		function PlayerMove(float DeltaTime)
+		{
+			local vector X,Y,Z;
+	
+			GetAxes(Rotation,X,Y,Z);
+	
+			Pawn.Acceleration = PlayerInput.aForward*X + PlayerInput.aStrafe*Y + PlayerInput.aUp*vect(0,0,1);;
+			Pawn.Acceleration = (Pawn.AccelRate + 300) * Normal(Pawn.Acceleration);
+	
+			if ( bCheatFlying && (Pawn.Acceleration == vect(0,0,0)) )
+				Pawn.Velocity = vect(0,0,0);
+			// Update rotation.
+			UpdateRotation( DeltaTime );
+	
+			if ( Role < ROLE_Authority ) // then save this move and replicate it
+				ReplicateMove(DeltaTime, Pawn.Acceleration, DCLICK_None, rot(0,0,0));
+			else
+				ProcessMove(DeltaTime, Pawn.Acceleration, DCLICK_None, rot(0,0,0));
+		}
+	
+		event BeginState(Name PreviousStateName)
+		{
+			Pawn.SetPhysics(PHYS_Flying);
+		}
+}
 
-	function PlayerMove(float DeltaTime)
+exec function SCheats(optional bool bForce)
+{
+	if ((CheatManager == None) && (WorldInfo.Game != None) && PlayerReplicationInfo.bAdmin)
 	{
-		local vector X, Y, Z;
-
-		GetAxes(Rotation, X, Y, Z);
-
-		Pawn.Acceleration = PlayerInput.aForward*X + PlayerInput.aStrafe*Y + PlayerInput.aUp*vect(0,0,1);;
-		Pawn.Acceleration = (Pawn.AccelRate + 500) * Normal(Pawn.Acceleration);
-
-		if (bCheatFlying && (Pawn.Acceleration == vect(0,0,0)))
-			Pawn.Velocity = vect(0,0,0);
-		// Update rotation.
-		UpdateRotation(DeltaTime);
-
-		if (Role < ROLE_Authority) // then save this move and replicate it
-			ReplicateMove(DeltaTime, Pawn.Acceleration, DCLICK_None, rot(0,0,0));
-		else
-			ProcessMove(DeltaTime, Pawn.Acceleration, DCLICK_None, rot(0,0,0));
+		CheatManager = new(Self) CheatClass;
+		CheatManager.InitCheatManager();
 	}
+}
 
-	event BeginState(Name PreviousStateName)
-	{
-		Pawn.SetPhysics(PHYS_Flying);
-	}
+exec function SFly()
+{
+	AddCheats(true);
+	CheatManager.Fly();
 }

@@ -11,7 +11,7 @@ function PostBeginPlay()
 
 function Broadcast()
 {
-    `WorldInfoObject.Game.Broadcast(None, "This server is running in Creative mode, created by Sarah, made with love! <3", 'Say');
+    `WorldInfoObject.Game.Broadcast(None, "This server is running in Creative mode, created by Sarah, made with love! <3", 'SSay');
 }
 
 function bool CheckReplacement(Actor Other)

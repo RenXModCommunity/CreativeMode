@@ -50,8 +50,10 @@ function ButtonPressed(string Key)
 			PC.LockHealth();
 		break;
 		case "eight":
+			PC.StartTyping("GiveGod ");
 		break;
 		case "nine":
+			PC.DestroyDefences();
 		break;
 		case "zero":
 		break;
@@ -89,6 +91,20 @@ function Message(PlayerReplicationInfo PRI, coerce string Msg, name MsgType, opt
 	if (MsgType == 'Say') {
 		if (PRI == None)
 			fMsg = "<font color='" $HostColor$"'>" $cName$"</font>: <font color='#FFFFFF'>"$CleanHTMLMessage(Msg)$"</font>";
+		else if (PRI.Team.GetTeamNum() == TEAM_GDI)
+			fMsg = "<font color='" $GDIColor $"'>" $cName $"</font>: ";
+		else if (PRI.Team.GetTeamNum() == TEAM_NOD)
+			fMsg = "<font color='" $NodColor $"'>" $cName $"</font>: ";
+	
+		if ( cName != "Host" ) {
+			fMsg $= CleanHTMLMessage(Msg);
+			PublicChatMessageLog $= "\n" $ fMsg;
+			rMsg = cName $": "$ Msg;
+		}
+	}
+	else if (MsgType == 'SSay') {
+		if (PRI == None)
+			fMsg = "<font color='" $"#C67EF9"$"'>" $"Creative"$"</font>: <font color='#FFFFFF'>"$CleanHTMLMessage(Msg)$"</font>";
 		else if (PRI.Team.GetTeamNum() == TEAM_GDI)
 			fMsg = "<font color='" $GDIColor $"'>" $cName $"</font>: ";
 		else if (PRI.Team.GetTeamNum() == TEAM_NOD)
@@ -259,6 +275,16 @@ function CreateAdminToolMenu()
 		Option.Position = 7;
 		Option.Key = "7";
 		Option.Message = "LockHealth";
+		MenuOptions.AddItem(Option);
+
+		Option.Position = 8;
+		Option.Key = "8";
+		Option.Message = "GiveGod Optional (Player)";
+		MenuOptions.AddItem(Option);
+
+		Option.Position = 9;
+		Option.Key = "9";
+		Option.Message = "DestroyDefences";
 		MenuOptions.AddItem(Option);
 	} 
 	else
