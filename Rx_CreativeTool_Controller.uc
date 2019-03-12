@@ -51,8 +51,7 @@ reliable server function ServerSandboxSpawn(string ClassName)
 	local Actor A;
 	local int i;
 
-	if (!PlayerReplicationInfo.bAdmin)
-		return;
+	if (!PlayerReplicationInfo.bAdmin) AccessDenied();
 
 	NewClass = class<Actor>(DynamicLoadObject(ClassName, class'Class'));
 
@@ -128,6 +127,8 @@ reliable server function ServerGiveCreds(Rx_PRI Receiver, optional float Credits
 {
 	if (PlayerReplicationInfo.bAdmin)
 		Receiver.AddCredits(Credits);
+
+	else AccessDenied();
 }
 
 exec function GivePromo(optional string PlayerName)
@@ -160,6 +161,8 @@ reliable server function ServerGivePromo(Rx_PRI Receiver)
 		Receiver.AddVP(Rx_Game(`WorldInfoObject.Game).default.VPMilestones[Rx_PRI(PlayerReplicationInfo).VRank] - Rx_PRI(PlayerReplicationInfo).Veterancy_Points);
 		CTextMessage("Promoted"@Receiver.GetHumanReadableName()$".");
 	}
+
+	else AccessDenied();
 }
 
 exec function LockHealth()
@@ -174,7 +177,7 @@ reliable server function ServerLockHealth()
 
 	if (PlayerReplicationInfo.bAdmin)
 	{	
-		foreach `WorldInfoObject.AllActors(class'Rx_Building_Team_Internals', BuildingInternals)
+		ForEach `WorldInfoObject.AllActors(class'Rx_Building_Team_Internals', BuildingInternals)
 		{
 			BuildingInternals.HealthLocked = !BuildingInternals.HealthLocked;
 			isLocked = BuildingInternals.HealthLocked;
@@ -185,6 +188,8 @@ reliable server function ServerLockHealth()
 		else
 			CTextMessage("Unlocked building HP", 'Green');
 	}
+
+	else AccessDenied();
 }
 
 exec function GiveChar(string Character)
@@ -203,5 +208,113 @@ reliable server function ServerGiveChar(string Character)
 		CTextMessage("Attempting to set you to"@Character, 'Green');
 	
 		Rx_PRI(PlayerReplicationInfo).SetChar(FamClass, Pawn, true);
+	}
+
+	else AccessDenied();
+}
+
+exec function GiveGod(optional string PlayerName)
+{
+	local string errorMessage;
+	local Rx_PRI PlayerPRI;
+
+	if (Len(PlayerName) > 0)
+	{
+		PlayerPRI = ParsePlayer(PlayerName, errorMessage);
+	
+		if (PlayerPRI == None)
+   		{
+   		    CTextMessage(errorMessage, 'Red');
+   		    return;
+   		}
+
+   		ServerGiveGod(PlayerPRI);
+	}
+	else 
+		ServerGiveGod(Rx_PRI(PlayerReplicationInfo));
+}
+
+reliable server function bool ServerGiveGod(Rx_PRI Receiver)
+{
+	local Rx_Controller C;
+
+	if (PlayerReplicationInfo.bAdmin)
+	{
+		if (Rx_Controller(Receiver.Owner) != None)
+			C = Rx_Controller(Receiver.Owner);
+
+		C.bGodMode = !C.bGodMode;
+
+		if (C.bGodMode)
+   			C.CTextMessage("You are no longer a god.");
+   		else
+   			C.CTextMessage("You are now a god.");
+
+		return C.bGodMode;
+	}
+
+	else AccessDenied();
+}
+
+exec function DestroyDefences()
+{
+   	ServerDestroyDefences();
+}
+
+reliable server function ServerDestroyDefences()
+{
+	local Rx_Defence Def;
+	local Rx_Building_Defense AdvDef;
+	local Rx_Defence_Controller DefCon;
+
+	if (PlayerReplicationInfo.bAdmin)
+	{
+		ForEach `WorldInfoObject.AllActors(class'Rx_Defence', Def)
+			Def.Destroy();
+
+		ForEach `WorldInfoObject.AllActors(class'Rx_Defence_Controller', DefCon)
+			DefCon.Destroy();
+
+		ForEach `WorldInfoObject.AllActors(class'Rx_Building_Defense', AdvDef)
+			Rx_Building_Team_Internals(AdvDef.BuildingInternals).PowerLost();
+
+		CTextMessage("Disabled all defences", 'Green');
+	}
+
+	else AccessDenied();
+}
+
+function AccessDenied()
+{
+	CTextMessage("Access denied.", 'Red');
+}
+
+state PlayerFlying
+{
+ignores SeePlayer, HearNoise, Bump;
+
+	function PlayerMove(float DeltaTime)
+	{
+		local vector X, Y, Z;
+
+		GetAxes(Rotation, X, Y, Z);
+
+		Pawn.Acceleration = PlayerInput.aForward*X + PlayerInput.aStrafe*Y + PlayerInput.aUp*vect(0,0,1);;
+		Pawn.Acceleration = (Pawn.AccelRate + 500) * Normal(Pawn.Acceleration);
+
+		if (bCheatFlying && (Pawn.Acceleration == vect(0,0,0)))
+			Pawn.Velocity = vect(0,0,0);
+		// Update rotation.
+		UpdateRotation(DeltaTime);
+
+		if (Role < ROLE_Authority) // then save this move and replicate it
+			ReplicateMove(DeltaTime, Pawn.Acceleration, DCLICK_None, rot(0,0,0));
+		else
+			ProcessMove(DeltaTime, Pawn.Acceleration, DCLICK_None, rot(0,0,0));
+	}
+
+	event BeginState(Name PreviousStateName)
+	{
+		Pawn.SetPhysics(PHYS_Flying);
 	}
 }
