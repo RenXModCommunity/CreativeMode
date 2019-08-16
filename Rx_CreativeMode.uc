@@ -7,12 +7,12 @@ function PostBeginPlay()
 	Super.PostBeginPlay();
 
 	SetTimer(1500.0f, true, nameof(Broadcast));
-	SetTimer(120.0f, true, nameof(Broadcast2));
+	SetTimer(300.0f, true, nameof(Broadcast2));
 }
 
 function Broadcast()
 {
-    `WorldInfoObject.Game.Broadcast(None, "Cynthia's Playground is running in Creative Mode, created by Sarah, enhanced by Cynthia, made with love! <3", 'SSay');
+    `WorldInfoObject.Game.Broadcast(None, "This server is running Creative Mode, created by Sarah & Cynthia, made with love! <3", 'SSay');
 }
 
 function Broadcast2()
