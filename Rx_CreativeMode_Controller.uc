@@ -2,16 +2,154 @@ class Rx_CreativeMode_Controller extends Rx_Controller;
 
 var privatewrite array<Actor> SpawnedActors;
 
+var bool SpawnDisabled;
+
 // Helper & misc. functions
 
 function AddToKeyString(coerce string KeyInput)
 {
+	local Rx_CreativeMode_HUD HUD;
+
+	HUD = Rx_CreativeMode_HUD(myHUD);
+
 	Super.AddToKeyString(KeyInput);
 
-	if (KeyInput ~= "B" && Rx_PlayerInput(PlayerInput).bCntrlPressed)
-		Rx_CreativeMode_HUD(myHUD).ToggleMenu();
+	if (KeyInput ~= "B" && Rx_PlayerInput(PlayerInput).bRadio0Pressed)
+	{
+		HUD.ToggleMenu();
 
-	Rx_CreativeMode_HUD(myHUD).ButtonPressed(KeyInput);
+		HUD.RxVehicleMenu=false;
+		HUD.RxVehicleMenu2=false;
+		HUD.SpawnMenu=false;
+		HUD.TSVehicleMenu=false;
+		HUD.DefencesMenu=false;
+		HUD.OtherMenu=false;
+		HUD.CharTeamSelect=false;
+		HUD.GDICharMenu1=false;
+		HUD.GDICharMenu2=false;
+		HUD.NodCharMenu1=false;
+		HUD.NodCharMenu2=false;
+	}		
+	if (KeyInput ~= "zero")
+	{
+		HUD.TSVehicleMenu=false;
+		HUD.DefencesMenu=false;
+		HUD.OtherMenu=false;
+		HUD.CharTeamSelect=false;
+		HUD.RxVehicleMenu=false;
+
+		if (HUD.OpenMenu && !HUD.RxVehicleMenu && !HUD.RxVehicleMenu2 && !HUD.TSVehicleMenu && !HUD.DefencesMenu && !HUD.OtherMenu && !HUD.CharTeamSelect && !HUD.GDICharMenu1 && !HUD.GDICharMenu2 && !HUD.NodCharMenu1 && !HUD.NodCharMenu2)
+			HUD.ToggleSpawnMenu();
+
+		if (HUD.RxVehicleMenu2 && !HUD.RxVehicleMenu)
+		{
+			HUD.RxVehicleMenu=true;
+			HUD.RxVehicleMenu2=false;
+		}
+		if (HUD.GDICharMenu1 && !HUD.CharTeamSelect)
+		{
+			HUD.CharTeamSelect=true;
+			HUD.GDICharMenu1=false;
+		}
+		if (HUD.GDICharMenu2 && !HUD.GDICharMenu1)
+		{
+			HUD.GDICharMenu1=true;
+			HUD.GDICharMenu2=false;
+		}
+		if (HUD.NodCharMenu1 && !HUD.CharTeamSelect)
+		{
+			HUD.CharTeamSelect=true;
+			HUD.NodCharMenu1=false;
+		}
+		if (HUD.NodCharMenu2 && !HUD.NodCharMenu1)
+		{
+			HUD.NodCharMenu1=true;
+			HUD.NodCharMenu2=false;
+		}
+	}
+	
+	if (KeyInput ~= "one")
+	{
+		if (HUD.SpawnMenu && !HUD.RxVehicleMenu)
+		{
+			HUD.RxVehicleMenu=true;
+			HUD.SpawnMenu=false;
+		}
+		else if (HUD.RxVehicleMenu && !HUD.SpawnMenu)
+			SandboxSpawn("RenX_Game.Rx_Vehicle_Humvee");
+
+		if (HUD.CharTeamSelect && !HUD.GDICharMenu1)
+		{
+			HUD.GDICharMenu1=true;
+			HUD.CharTeamSelect=false;
+		}
+		else if (HUD.GDICharMenu1 && !HUD.CharTeamSelect)
+			GiveChar("RenX_Game.Rx_FamilyInfo_GDI_Soldier");
+	}
+
+	if (KeyInput ~= "two")
+	{
+		if (HUD.SpawnMenu && !HUD.TSVehicleMenu)
+		{
+			HUD.TSVehicleMenu=true;
+			HUD.SpawnMenu=false;
+		}
+		else if (HUD.TSVehicleMenu && !HUD.SpawnMenu)
+			SandboxSpawn("RenX_Game.TS_Vehicle_HoverMRLS");
+
+		if (HUD.CharTeamSelect && !HUD.NodCharMenu1)
+		{
+			HUD.NodCharMenu1=true;
+			HUD.CharTeamSelect=false;
+		}
+		else if (HUD.NodCharMenu1 && !HUD.CharTeamSelect)
+			GiveChar("RenX_Game.Rx_FamilyInfo_Nod_Shotgunner");
+	}
+	if (KeyInput ~= "three")
+		if (HUD.SpawnMenu && !HUD.DefencesMenu)
+		{
+			HUD.DefencesMenu=true;
+			HUD.SpawnMenu=false;
+		}
+		else if (HUD.DefencesMenu && !HUD.SpawnMenu)
+			SandboxSpawn("RenX_Game.Rx_Defence_Turret");
+
+	if (KeyInput ~= "five" && HUD.SpawnMenu && !HUD.CharTeamSelect)
+	{
+		HUD.CharTeamSelect=true;
+		HUD.SpawnMenu=false;
+	}
+
+	if (KeyInput ~= "six" && HUD.SpawnMenu && !HUD.OtherMenu)
+	{
+		HUD.OtherMenu=true;
+		HUD.SpawnMenu=false;
+	}
+		
+	if (KeyInput ~= "nine")
+	{
+		if (HUD.RxVehicleMenu && !HUD.RxVehicleMenu2)
+		{
+			HUD.RxVehicleMenu2=true;
+			HUD.RxVehicleMenu=false;
+		}
+		else if (HUD.RxVehicleMenu2 && !HUD.RxVehicleMenu)
+			SandboxSpawn("RenX_Game.Rx_Vehicle_MIG35");
+
+		if (HUD.GDICharMenu1 && !HUD.GDICharMenu2)
+		{
+			HUD.GDICharMenu2=true;
+			HUD.GDICharMenu1=false;
+		}
+			
+		if (HUD.NodCharMenu1 && !HUD.NodCharMenu2)
+		{
+			HUD.NodCharMenu2=true;
+			HUD.NodCharMenu1=false;
+		}
+	}
+
+	HUD.ButtonPressed(KeyInput);
 }
 
 function Rx_PRI FindPlayerPRI(optional string PlayerName)
@@ -68,9 +206,15 @@ reliable server function ServerSandboxSpawn(string ClassName)
 	local Actor A;
 	local int i;
 
-	if (!PlayerReplicationInfo.bAdmin)
+//	if (!PlayerReplicationInfo.bAdmin)
+//	{
+//		AccessDenied();
+//		return;
+//	}
+
+	if (SpawnDisabled && !PlayerReplicationInfo.bAdmin)
 	{
-		AccessDenied();
+		TooRecent();
 		return;
 	}
 
@@ -78,6 +222,8 @@ reliable server function ServerSandboxSpawn(string ClassName)
 
 	if (NewClass != None)
 	{
+	SpawnDisabled=true;
+	SetTimer(5, false, 'ResetSpawnTimer');
 		if (NewClass == class'Renx_Game.Rx_Weapon_DeployedBeacon') 
 			For (i = 0; i < SpawnedActors.Length; i++)
 				if (SpawnedActors[i].IsA('Rx_Weapon_DeployedBeacon'))
@@ -91,7 +237,7 @@ reliable server function ServerSandboxSpawn(string ClassName)
 		else
 			SpawnLoc = Location;
 
-		A = Spawn(NewClass,,,SpawnLoc + 72 * Vector(Rotation) + vect(0.0,0.0,1.0) * 15);
+		A = Spawn(NewClass,,,SpawnLoc + 500 * Vector(Rotation) + vect(0.0,0.0,1.0) * 15);
 		SpawnedActors.AddItem(A);
 
 		if (A.IsA('Rx_Weapon_DeployedActor'))
@@ -150,7 +296,25 @@ reliable server function ServerGiveCreds(Rx_PRI Receiver, optional float Credits
 
 exec function GivePromo(optional string PlayerName)
 {
-	ServerGivePromo(FindPlayerPRI(PlayerName));
+	local string errorMessage;
+	local Rx_PRI PlayerPRI;
+
+	if (Len(PlayerName) > 0)
+	{
+		PlayerPRI = ParsePlayer(PlayerName, errorMessage);
+	
+		if (PlayerPRI == None)
+   		{
+   		    CTextMessage(errorMessage, 'Red');
+   		    return;
+   		}
+
+   		ServerGivePromo(PlayerPRI);
+	}
+	else 
+	{
+		ServerGivePromo(Rx_PRI(PlayerReplicationInfo));
+	}
 }
 
 reliable server function ServerGivePromo(Rx_PRI Receiver)
@@ -240,22 +404,44 @@ reliable server function ServerGiveChar(string Character)
 {
 	local class<Rx_FamilyInfo> FamClass;
 
-	if (PlayerReplicationInfo.bAdmin)
-	{	
+//	if (PlayerReplicationInfo.bAdmin)
+//	{	
 		FamClass = class<Rx_FamilyInfo>(DynamicLoadObject(Character, class'Class'));
 
 		CTextMessage("Attempting to set you to"@Character, 'Green');
 	
 		Rx_PRI(PlayerReplicationInfo).SetChar(FamClass, Pawn, true);
-	}
+//	}
 
-	else AccessDenied();
+//	else AccessDenied();
 }
 
 exec function Fly(optional string PlayerName)
 {
-	ServerFly(FindPlayerPRI(PlayerName));
+	local string errorMessage;
+	local Rx_PRI PlayerPRI;
+
+	if (Len(PlayerName) > 0)
+	{
+		PlayerPRI = ParsePlayer(PlayerName, errorMessage);
+	
+		if (PlayerPRI == None)
+   		{
+   		    CTextMessage(errorMessage, 'Red');
+   		    return;
+   		}
+
+   		ServerFly(PlayerPRI);
+	}
+	else 
+	{
+		ServerFly(Rx_PRI(PlayerReplicationInfo));
+	}
 }
+
+//{
+//	ServerFly(FindPlayerPRI(PlayerName));
+//}
 
 reliable server function ServerFly(Rx_PRI Receiver)
 {
@@ -279,8 +465,29 @@ reliable server function ServerFly(Rx_PRI Receiver)
 
 exec function Walk(optional string PlayerName)
 {
-	ServerWalk(FindPlayerPRI(PlayerName));
+	local string errorMessage;
+	local Rx_PRI PlayerPRI;
+
+	if (Len(PlayerName) > 0)
+	{
+		PlayerPRI = ParsePlayer(PlayerName, errorMessage);
+	
+		if (PlayerPRI == None)
+   		{
+   		    CTextMessage(errorMessage, 'Red');
+   		    return;
+   		}
+
+   		ServerWalk(PlayerPRI);
+	}
+	else 
+	{
+		ServerWalk(Rx_PRI(PlayerReplicationInfo));
+	}
 }
+//{
+//	ServerWalk(FindPlayerPRI(PlayerName));
+//}
 
 reliable server function ServerWalk(Rx_PRI Receiver)
 {
@@ -304,7 +511,23 @@ reliable server function ServerWalk(Rx_PRI Receiver)
 
 exec function GiveGod(optional string PlayerName)
 {
-	ServerGiveGod(FindPlayerPRI(PlayerName));
+	local string errorMessage;
+	local Rx_PRI PlayerPRI;
+
+	if (Len(PlayerName) > 0)
+	{
+		PlayerPRI = ParsePlayer(PlayerName, errorMessage);
+	
+		if (PlayerPRI == None)
+   		{
+   		    CTextMessage(errorMessage, 'Red');
+   		    return;
+   		}
+
+   		ServerGiveGod(PlayerPRI);
+	}
+	else 
+		ServerGiveGod(Rx_PRI(PlayerReplicationInfo));
 }
 
 reliable server function ServerGiveGod(Rx_PRI Receiver)
@@ -383,4 +606,14 @@ reliable server function ServerDestroyDefences()
 function AccessDenied()
 {
 	CTextMessage("Access denied", 'Red');
+}
+
+function TooRecent()
+{
+	CTextMessage("Your last spawn was too recent", 'Red');
+}
+
+function ResetSpawnTimer()
+{
+	SpawnDisabled=false;
 }
