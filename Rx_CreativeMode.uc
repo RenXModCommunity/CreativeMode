@@ -6,7 +6,7 @@ function PostBeginPlay()
 {
 	Super.PostBeginPlay();
 
-	SetTimer(1500.0f, true, nameof(Broadcast));
+	SetTimer(1800.0f, true, nameof(Broadcast));
 	SetTimer(300.0f, true, nameof(Broadcast2));
 }
 
