@@ -2,18 +2,7 @@ class Rx_CreativeMode_HUD extends Rx_HUD;
 
 var int DefaultTargettingRangex, pageNum;
 var privatewrite Rx_CreativeMode_HUDC AdminHud;
-var bool OpenMenu;
-var bool SpawnMenu;
-var bool RxVehicleMenu;
-var bool RxVehicleMenu2;
-var bool TSVehicleMenu;
-var bool DefencesMenu;
-var bool OtherMenu;
-var bool CharTeamSelect;
-var bool GDICharMenu1;
-var bool GDICharMenu2;
-var bool NodCharMenu1;
-var bool NodCharMenu2;
+var bool OpenMenu, SpawnMenu, RxVehicleMenu, RxVehicleMenu2, TSVehicleMenu, DefencesMenu, OtherMenu, CharTeamSelect, GDICharMenu1, GDICharMenu2, NodCharMenu1, NodCharMenu2;
 
 var bool bDrawFPSMenu;
 var privatewrite array<Object> CurrentList;
@@ -29,52 +18,71 @@ function ButtonPressed(string Key)
 {
 	local Rx_CreativeMode_Controller PC;
 
-
 	PC = Rx_CreativeMode_Controller(PlayerOwner);
-
 
 	if (OpenMenu && !SpawnMenu && !RxVehicleMenu && !RxVehicleMenu2 && !TSVehicleMenu && !DefencesMenu && !OtherMenu && !CharTeamSelect && !GDICharMenu1 && !GDICharMenu2 && !NodCharMenu1 && !NodCharMenu2)
 	{
-		switch (Key)
+
+		if (PC.PlayerReplicationInfo.bAdmin)
 		{
-			case "one":
-				PC.StartTyping("Gimme ");
-			break;
-	
-			case "two":
-				PC.StartTyping("SandboxSpawn ");
-			break;
-	
-			case "three":
-				PC.StartTyping("GiveChar ");
-			break;
-	
-			case "four":
-				PC.StartTyping("SandBoxKillOwned ");
-			break;
-	
-			case "five":
-				PC.StartTyping("GiveCreds ");
-			break;
-	
-			case "six":
-				PC.StartTyping("GivePromo ");
-			break;
+			switch (Key)
+			{
+				case "one":
+					PC.StartTyping("Gimme ");
+				break;
+		
+				case "two":
+					PC.StartTyping("SandboxSpawn ");
+				break;
+		
+				case "three":
+					PC.StartTyping("GiveChar ");
+				break;
+		
+				case "four":
+					PC.StartTyping("SandBoxKillOwned ");
+				break;
+		
+				case "five":
+					PC.StartTyping("GiveCreds ");
+				break;
+		
+				case "six":
+					PC.StartTyping("GivePromo ");
+				break;
 
-			case "seven":
-				PC.LockHealth();
-			break;
+				case "seven":
+					PC.LockHealth();
+				break;
 
-			case "eight":
-				PC.StartTyping("GiveGod ");
-			break;
+				case "eight":
+					PC.StartTyping("GiveGod ");
+				break;
 
-			case "nine":
-				PC.DestroyDefences();
-			break;
-			case "zero":
-//				ToggleSpawnMenu();
-			break;
+				case "nine":
+					PC.DestroyDefences();
+				break;
+				case "zero":
+	//				ToggleSpawnMenu();
+				break;
+			}
+		}
+		else
+		{
+			switch (Key)
+			{
+				case "one":
+					PC.StartTyping("Gimme ");
+				break;
+		
+				case "two":
+					PC.StartTyping("SandboxSpawn ");
+				break;
+		
+				case "three":
+					PC.StartTyping("GiveChar ");
+				break;
+			}
 		}
 	}
 	else if (SpawnMenu && !RxVehicleMenu)
@@ -293,13 +301,13 @@ function ButtonPressed(string Key)
 			break;
 	
 			case "four":
-				PC.Gimme("TRR.Obygun");
-				PC.CTextMessage("Obelisk Gun acquired", 'Green');
+//				PC.Gimme("TRR.Obygun");
+//				PC.CTextMessage("Obelisk Gun acquired", 'Green');
 			break;
 	
 			case "five":
-				PC.Gimme("TRR.SuperRepairGun");
-				PC.CTextMessage("Super Repair Gun acquired", 'Green');
+//				PC.Gimme("TRR.SuperRepairGun");
+//				PC.CTextMessage("Super Repair Gun acquired", 'Green');
 			break;
 	
 
@@ -741,12 +749,17 @@ if (!SpawnMenu && !RxVehicleMenu && !RxVehicleMenu2 && !TSVehicleMenu &&!Defence
 		Option.Message = "SandboxSpawn (VehicleClass)";
 		MenuOptions.AddItem(Option);
 
-		Option.Position = 4;
+		Option.Position = 3;
+		Option.Key = "3";
+		Option.Message = "GiveChar (Class)";
+		MenuOptions.AddItem(Option);
+
+		Option.Position = 6;
 		Option.Key = "";
 		Option.Message = "You're not admin :(";
 		MenuOptions.AddItem(Option);
 
-		Option.Position = 3;
+		Option.Position = 4;
 		Option.Key = "0";
 		Option.Message = "Spawn Menu";
 		MenuOptions.AddItem(Option);
@@ -1073,7 +1086,7 @@ if (OtherMenu)
 	Option.Message = "SAM Site Manual";
 	MenuOptions.AddItem(Option);
 
-	Option.Position = 4;
+/*	Option.Position = 4;
 	Option.Key = "4";
 	Option.Message = "Obelisk Gun";
 	MenuOptions.AddItem(Option);
@@ -1082,6 +1095,7 @@ if (OtherMenu)
 	Option.Key = "5";
 	Option.Message = "Super Repair Gun";
 	MenuOptions.AddItem(Option);
+*/
 
 }
 
