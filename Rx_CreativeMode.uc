@@ -1,6 +1,6 @@
 class Rx_CreativeMode extends Rx_Mutator;
 
-var private Rx_CreativeMode_ServerFPS SystemMutator;
+var private CM_ServerFPS SystemMutator;
 
 function PostBeginPlay()
 {
@@ -17,15 +17,15 @@ function Broadcast()
 
 function Broadcast2()
 {
-    `WorldInfoObject.Game.Broadcast(None, "Press CTRL+B to open the Creative Mode menu", 'SSay');
+    `WorldInfoObject.Game.Broadcast(None, "Press B to open the Creative Mode menu", 'SSay');
 }
 
 function bool CheckReplacement(Actor Other)
 { 	
 	if (Other.IsA('Rx_TeamInfo'))
 	{
-		Rx_Game(`WorldInfoObject.Game).HudClass = class'Rx_CreativeMode_HUD';
-		Rx_Game(`WorldInfoObject.Game).PlayerControllerClass = class'Rx_CreativeMode_Controller';
+		Rx_Game(`WorldInfoObject.Game).HudClass = class'CM_HUD';
+		Rx_Game(`WorldInfoObject.Game).PlayerControllerClass = class'CM_Controller';
 	}
 
 	return true;
@@ -33,7 +33,7 @@ function bool CheckReplacement(Actor Other)
 
 function InitMutator(string Options, out string ErrorMessage)
 {
-    SystemMutator = Spawn(class'Rx_CreativeMode_ServerFPS');
+    SystemMutator = Spawn(class'CM_ServerFPS');
 }
 
 simulated function Tick(float DeltaTime)
