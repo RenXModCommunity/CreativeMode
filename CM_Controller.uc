@@ -1,4 +1,9 @@
-class CM_Controller extends Rx_Controller;
+class CM_Controller extends Rx_Controller
+config(CreativeMode);
+
+var config bool PlayersCanSpawn;
+
+var config float SpawnCooldown;
 
 var privatewrite array<Actor> SpawnedActors;
 
@@ -277,6 +282,11 @@ exec function RestoreBuildings()
    	ServerRestoreBuildings();
 }
 
+exec function TogglePlayerSpawns()
+{
+   	ServerTogglePlayerSpawns();
+}
+
 exec function TogglePlaceVehicle(coerce string InVehicle)
 {
 	local class<Rx_Vehicle> VehicleToPlace;
@@ -322,9 +332,44 @@ exec function ExitSpawnMode()
 ////////////////////Server Functions/////////////////////
 /////////////////////////////////////////////////////////
 
+reliable server function ServerTogglePlayerSpawns()
+{
+	local CM_Controller CMC;
+
+	if (!CanExecuteCommands())
+	{
+		AccessDenied();
+		return;
+	}
+
+
+	foreach WorldInfo.AllControllers(class'CM_Controller', CMC)
+	{
+		CMC.PlayersCanSpawn = !CMC.PlayersCanSpawn;
+	}
+	SaveConfig();
+
+	if (PlayersCanSpawn)
+	{
+   		CTextMessage("Player spawns enabled");
+   		`WorldInfoObject.Game.Broadcast(None, GetHumanReadableName()@"enabled player spawns", 'SSay');
+	}
+   	else
+   	{
+   		CTextMessage("Player spawns disabled");
+   		`WorldInfoObject.Game.Broadcast(None, GetHumanReadableName()@"disabled player spawns", 'SSay');
+   	}
+}
+
 reliable server function ServerGimme(string WeaponClassStr)
 {
 	local class<Weapon> WeaponClass;
+
+	if (!PlayersCanSpawn)
+	{
+		AccessDenied();
+		return;
+	}
 
 	WeaponClass = class<Weapon>(DynamicLoadObject(WeaponClassStr, class'Class'));
 
@@ -338,11 +383,11 @@ reliable server function ServerSandboxSpawn(string ClassName)
 	local Actor A;
 	local int i;
 
-/*	if (!CanExecuteCommands())
+	if (!PlayersCanSpawn)
 	{
 		AccessDenied();
 		return;
-	}*/
+	}
 
 	if (SpawnDisabled && !CanExecuteCommands())
 	{
@@ -352,10 +397,16 @@ reliable server function ServerSandboxSpawn(string ClassName)
 
 	NewClass = class<Actor>(DynamicLoadObject(ClassName, class'Class'));
 
+	if (ClassIsChildOf(NewClass, class'Renx_Game.Rx_Sentinel') && !CanExecuteCommands())
+	{
+		AccessDenied();
+		return;
+	}
+
 	if (NewClass != None)
 	{
 		SpawnDisabled = true;
-		SetTimer(5, false, 'ResetSpawnTimer');
+		SetTimer(SpawnCooldown, false, 'ResetSpawnTimer');
 
 		if (ClassIsChildOf(NewClass, class'Renx_Game.Rx_Weapon_DeployedBeacon')) 
 			For (i = 0; i < SpawnedActors.Length; i++)
@@ -460,11 +511,11 @@ reliable server function ServerGiveChar(string Character)
 {
 	local class<Rx_FamilyInfo> FamClass;
 
-/*	if (!CanExecuteCommands())
+	if (!PlayersCanSpawn)
 	{
 		AccessDenied();
 		return;
-	}*/
+	}
 
 	FamClass = class<Rx_FamilyInfo>(DynamicLoadObject(Character, class'Class'));
 
@@ -639,11 +690,11 @@ reliable server function bool ServerAttemptActorSpawn(class<Rx_Vehicle> VehicleT
 {
 	local Actor ThisActor;
 
-/*	if (!CanExecuteCommands())
+	if (!PlayersCanSpawn)
 	{
 		AccessDenied();
 		return false;
-	}*/
+	}
 
 	if (SpawnDisabled && !CanExecuteCommands())
 	{
@@ -652,7 +703,7 @@ reliable server function bool ServerAttemptActorSpawn(class<Rx_Vehicle> VehicleT
 	}
 
 	SpawnDisabled = true;
-	SetTimer(5, false, 'ResetSpawnTimer');
+	SetTimer(SpawnCooldown, false, 'ResetSpawnTimer');
 
 	ThisActor = spawn(VehicleToSpawn, None,,VLocation,VRotation);
 	UTVehicle(ThisActor).Mesh.WakeRigidBody();
