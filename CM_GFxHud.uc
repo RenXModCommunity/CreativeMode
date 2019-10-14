@@ -10,6 +10,7 @@ var GFxClikWidget WalkButton;
 var GFxClikWidget PromoteButton;
 var GFxClikWidget LockHPButton;
 var GFxClikWidget KillDefsButton;
+var GFxClikWidget RestoreBuildsButton;
 var GFxClikWidget ClearSpawnsButton;
 
 var GameViewportClient VPC;
@@ -183,6 +184,15 @@ function OnClearSpawnsButtonPress(GFxClikWidget.EventData ev)
 	}
 }
 
+function OnRestoreBuildsButtonPress(GFxClikWidget.EventData ev)
+{
+	if (PlayerOwner != None)
+	{
+		PlayerOwner.RestoreBuildings();
+		OnCommandRun();
+	}
+}
+
 function OnCommandRun()
 {
 	//if (PlayerOwner.CanExecuteCommands())
@@ -287,6 +297,13 @@ event bool WidgetInitialized(name WidgetName, name WidgetPath, GFxObject Widget)
 				ClearSpawnsButton = GFxClikWidget(Widget);
 			}
 			ClearSpawnsButton.AddEventListener('CLIK_buttonClick', OnClearSpawnsButtonPress);
+			bWasHandled = true;
+		break;
+		case 'RestoreBuildsButton':
+			if (RestoreBuildsButton == none || RestoreBuildsButton != Widget) {
+				RestoreBuildsButton = GFxClikWidget(Widget);
+			}
+			RestoreBuildsButton.AddEventListener('CLIK_buttonClick', OnRestoreBuildsButtonPress);
 			bWasHandled = true;
 		break;
 	}
@@ -423,4 +440,5 @@ DefaultProperties
 	WidgetBindings.Add((WidgetName="LockHPButton",WidgetClass=class'GFxClikWidget'))
 	WidgetBindings.Add((WidgetName="KillDefsButton",WidgetClass=class'GFxClikWidget'))
 	WidgetBindings.Add((WidgetName="ClearSpawnsButton",WidgetClass=class'GFxClikWidget'))
+	WidgetBindings.Add((WidgetName="RestoreBuildsButton",WidgetClass=class'GFxClikWidget'))
 }

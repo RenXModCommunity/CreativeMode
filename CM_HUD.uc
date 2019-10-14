@@ -401,6 +401,8 @@ DefaultProperties
 
 	OmittedVehicles.Add(class'Rx_Vehicle')
 	OmittedVehicles.Add(class'Rx_Vehicle_Harvester')
+	OmittedVehicles.Add(class'Rx_Vehicle_Harvester_GDI')
+	OmittedVehicles.Add(class'Rx_Vehicle_Harvester_Nod')
 	OmittedVehicles.Add(class'Rx_Vehicle_Treaded')
 	OmittedVehicles.Add(class'Rx_Vehicle_Air')
 	OmittedVehicles.Add(class'Rx_Defence')
@@ -409,7 +411,9 @@ DefaultProperties
 	OmittedVehicles.Add(class'Rx_Vehicle_Air_Jet')
 	OmittedVehicles.Add(class'Rx_Vehicle_Chinook')
 	OmittedVehicles.Add(class'Rx_Defence_GuardTower')
+	OmittedVehicles.Add(class'Rx_Defence_GuardTower_Nod')
 	OmittedVehicles.Add(class'Rx_Defence_Turret')
+	OmittedVehicles.Add(class'Rx_Defence_Turret_GDI')
 	OmittedVehicles.Add(class'Rx_Vehicle_Deployable')
 
 	OmittedInfantry.Add(class'Rx_FamilyInfo')

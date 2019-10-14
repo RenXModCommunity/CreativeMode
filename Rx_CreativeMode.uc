@@ -17,7 +17,7 @@ function Broadcast()
 
 function Broadcast2()
 {
-    `WorldInfoObject.Game.Broadcast(None, "Press CTRL+B to open the Creative Mode menu", 'SSay');
+    `WorldInfoObject.Game.Broadcast(None, "Press B to open the Creative Mode menu", 'SSay');
 }
 
 function bool CheckReplacement(Actor Other)

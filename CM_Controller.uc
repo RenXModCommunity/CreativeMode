@@ -1,4 +1,9 @@
-class CM_Controller extends Rx_Controller;
+class CM_Controller extends Rx_Controller
+config(CreativeMode);
+
+var config bool PlayersCanSpawn;
+
+var config float SpawnCooldown;
 
 var privatewrite array<Actor> SpawnedActors;
 
@@ -272,6 +277,16 @@ exec function DestroyDefences()
    	ServerDestroyDefences();
 }
 
+exec function RestoreBuildings()
+{
+   	ServerRestoreBuildings();
+}
+
+exec function TogglePlayerSpawns()
+{
+   	ServerTogglePlayerSpawns();
+}
+
 exec function TogglePlaceVehicle(coerce string InVehicle)
 {
 	local class<Rx_Vehicle> VehicleToPlace;
@@ -317,13 +332,52 @@ exec function ExitSpawnMode()
 ////////////////////Server Functions/////////////////////
 /////////////////////////////////////////////////////////
 
+reliable server function ServerTogglePlayerSpawns()
+{
+	local CM_Controller CMC;
+
+	if (!CanExecuteCommands())
+	{
+		AccessDenied();
+		return;
+	}
+
+
+	foreach WorldInfo.AllControllers(class'CM_Controller', CMC)
+	{
+		CMC.PlayersCanSpawn = !CMC.PlayersCanSpawn;
+	}
+	SaveConfig();
+
+	if (PlayersCanSpawn)
+	{
+   		CTextMessage("Player spawns enabled");
+   		`WorldInfoObject.Game.Broadcast(None, GetHumanReadableName()@"enabled player spawns", 'SSay');
+   		`logRxPub(GetHumanReadableName()@"enabled player spawns");
+	}
+   	else
+   	{
+   		CTextMessage("Player spawns disabled");
+   		`WorldInfoObject.Game.Broadcast(None, GetHumanReadableName()@"disabled player spawns", 'SSay');
+   		`logRxPub(GetHumanReadableName()@"disabled player spawns");
+   	}
+}
+
 reliable server function ServerGimme(string WeaponClassStr)
 {
 	local class<Weapon> WeaponClass;
 
+	if (!PlayersCanSpawn)
+	{
+		AccessDenied();
+		return;
+	}
+
 	WeaponClass = class<Weapon>(DynamicLoadObject(WeaponClassStr, class'Class'));
 
 	Pawn.CreateInventory(WeaponClass);
+
+	`logRxPub(GetHumanReadableName()@"gave himself a"@WeaponClass);
 }
 
 reliable server function ServerSandboxSpawn(string ClassName)
@@ -333,13 +387,13 @@ reliable server function ServerSandboxSpawn(string ClassName)
 	local Actor A;
 	local int i;
 
-	if (!CanExecuteCommands())
+	if (!PlayersCanSpawn)
 	{
 		AccessDenied();
 		return;
 	}
 
-	if (SpawnDisabled)
+	if (SpawnDisabled && !CanExecuteCommands())
 	{
 		TooRecent();
 		return;
@@ -347,10 +401,16 @@ reliable server function ServerSandboxSpawn(string ClassName)
 
 	NewClass = class<Actor>(DynamicLoadObject(ClassName, class'Class'));
 
+	if (ClassIsChildOf(NewClass, class'Renx_Game.Rx_Sentinel') && !CanExecuteCommands())
+	{
+		AccessDenied();
+		return;
+	}
+
 	if (NewClass != None)
 	{
 		SpawnDisabled = true;
-		SetTimer(5, false, 'ResetSpawnTimer');
+		SetTimer(SpawnCooldown, false, 'ResetSpawnTimer');
 
 		if (ClassIsChildOf(NewClass, class'Renx_Game.Rx_Weapon_DeployedBeacon')) 
 			For (i = 0; i < SpawnedActors.Length; i++)
@@ -378,6 +438,7 @@ reliable server function ServerSandboxSpawn(string ClassName)
 			UTVehicle(A).SetTeamNum(GetTeamNum());
 
 		`WorldInfoObject.Game.Broadcast(None, GetHumanReadableName()@"spawned a"@A.GetHumanReadableName(), 'SSay');
+		`logRxPub(GetHumanReadableName()@"spawned a"@A.GetHumanReadableName());
 	}
 	else
 	{
@@ -423,6 +484,7 @@ reliable server function ServerGivePromo(Rx_PRI Receiver)
 	Receiver.AddVP(Rx_Game(`WorldInfoObject.Game).default.VPMilestones[FMax(2, Receiver.VRank)] - Receiver.Veterancy_Points);
 	CTextMessage("Promoted"@Receiver.GetHumanReadableName());
 	`WorldInfoObject.Game.Broadcast(None, GetHumanReadableName()@"promoted"@Receiver.GetHumanReadableName(), 'SSay');
+	`logRxPub(GetHumanReadableName()@"promoted"@Receiver.GetHumanReadableName());
 }
 
 
@@ -449,13 +511,14 @@ reliable server function ServerLockHealth()
 
 	CTextMessage("Building HP is now" @ tempS, 'Green');
 	`WorldInfoObject.Game.Broadcast(None, GetHumanReadableName()@tempS@"building HP", 'SSay');
+	`logRxPub(GetHumanReadableName()@tempS@"building HP");
 }
 
 reliable server function ServerGiveChar(string Character)
 {
 	local class<Rx_FamilyInfo> FamClass;
 
-	if (!CanExecuteCommands())
+	if (!PlayersCanSpawn)
 	{
 		AccessDenied();
 		return;
@@ -529,11 +592,13 @@ reliable server function ServerGiveGod(Rx_PRI Receiver)
 		{
    			C.CTextMessage("You are now a god");
    			`WorldInfoObject.Game.Broadcast(None, GetHumanReadableName()@"gave themself god mode", 'SSay');
+   			`logRxPub(GetHumanReadableName()@"gave themself god mode");
 		}
    		else
    		{
    			C.CTextMessage("You are no longer a god");
    			`WorldInfoObject.Game.Broadcast(None, GetHumanReadableName()@"removed their own god mode", 'SSay');
+   			`logRxPub(GetHumanReadableName()@"removed their own god mode");
    		}
 
    		return;
@@ -544,12 +609,14 @@ reliable server function ServerGiveGod(Rx_PRI Receiver)
    		CTextMessage(C.GetHumanReadableName()@"is now a god");
    		C.CTextMessage("You are now a god");
    		`WorldInfoObject.Game.Broadcast(None, GetHumanReadableName()@"gave"@C.GetHumanReadableName()@"god mode", 'SSay');
+   		`logRxPub(GetHumanReadableName()@"gave"@C.GetHumanReadableName()@"god mode");
 	}
    	else
    	{
    		CTextMessage(C.GetHumanReadableName()@"is no longer a god");
    		C.CTextMessage("You are no longer a god");
    		`WorldInfoObject.Game.Broadcast(None, GetHumanReadableName()@"disabled"@C.GetHumanReadableName()$"'s god mode", 'SSay');
+   		`logRxPub(GetHumanReadableName()@"disabled"@C.GetHumanReadableName()$"'s god mode");
    	}
 }
 
@@ -575,24 +642,88 @@ reliable server function ServerDestroyDefences()
 		Rx_Building_Team_Internals(AdvDef.BuildingInternals).PowerLost();
 
 	CTextMessage("Disabled all defences", 'Green');
-	`WorldInfoObject.Game.Broadcast(None, GetHumanReadableName()@"disabled base defences", 'SSay');		
+	`WorldInfoObject.Game.Broadcast(None, GetHumanReadableName()@"disabled base defences", 'SSay');	
+	`logRxPub(GetHumanReadableName()@"disabled base defences");	
+}
+
+reliable server function ServerRestoreBuildings()
+{
+	local Rx_Building_Team_Internals BuildingInternals;
+	local Rx_Building_Refinery_GDI_Internals GDI_Ref;
+	local Rx_Building_Refinery_Nod_Internals Nod_Ref;
+
+
+	if (!CanExecuteCommands())
+	{
+		AccessDenied();
+		return;
+	}
+
+	Rx_Game(WorldInfo.Game).GetVehicleManager().bGDIRefDestroyed=false;
+	Rx_Game(WorldInfo.Game).GetVehicleManager().bNodRefDestroyed=false;
+	Rx_Game(WorldInfo.Game).GetVehicleManager().bNodIsUsingAirdrops=false;
+	Rx_Game(WorldInfo.Game).GetVehicleManager().bGDIIsUsingAirdrops=false;
+	Rx_Game(WorldInfo.Game).GetVehicleManager().NodAdditionalAirdropProductionDelay=0;
+	Rx_Game(WorldInfo.Game).GetVehicleManager().GDIAdditionalAirdropProductionDelay=0;
+
+	ForEach `WorldInfoObject.AllActors(class'Rx_Building_Refinery_GDI_Internals', GDI_Ref)
+	{
+		if(GDI_Ref.IsDestroyed())
+		{
+			Rx_Game(WorldInfo.Game).GetVehicleManager().QueueHarvester(TEAM_GDI, false);
+		}
+	}
+
+	ForEach `WorldInfoObject.AllActors(class'Rx_Building_Refinery_Nod_Internals', Nod_Ref)
+	{
+		if(Nod_Ref.IsDestroyed())
+		{
+			Rx_Game(WorldInfo.Game).GetVehicleManager().QueueHarvester(TEAM_Nod, false);
+		}
+	}
+
+	ForEach `WorldInfoObject.AllActors(class'Rx_Building_Team_Internals', BuildingInternals)
+	{
+		if(BuildingInternals.IsDestroyed() || BuildingInternals.bNoPower)
+		{
+			BuildingInternals.Health=BuildingInternals.TrueHealthMax;
+			BuildingInternals.Armor=BuildingInternals.TrueHealthMax;
+			BuildingInternals.bDestroyed=false;
+			BuildingInternals.PowerRestore();
+		}
+	}
+
+
+	CTextMessage("Buildings restored", 'Green');
+	`WorldInfoObject.Game.Broadcast(None, GetHumanReadableName()@"restored all buildings.", 'SSay');
+	`logRxPub(GetHumanReadableName()@"restored all buildings.");
 }
 
 reliable server function bool ServerAttemptActorSpawn(class<Rx_Vehicle> VehicleToSpawn, Vector VLocation, Rotator VRotation)
 {
 	local Actor ThisActor;
 
-	if (!CanExecuteCommands())
+	if (!PlayersCanSpawn)
 	{
 		AccessDenied();
 		return false;
 	}
+
+	if (SpawnDisabled && !CanExecuteCommands())
+	{
+		TooRecent();
+		return false;
+	}
+
+	SpawnDisabled = true;
+	SetTimer(SpawnCooldown, false, 'ResetSpawnTimer');
 
 	ThisActor = spawn(VehicleToSpawn, None,,VLocation,VRotation);
 	UTVehicle(ThisActor).Mesh.WakeRigidBody();
 	UTVehicle(ThisActor).SetTeamNum(GetTeamNum());
 
 	`WorldInfoObject.Game.Broadcast(None, GetHumanReadableName()@"spawned a"@ThisActor.GetHumanReadableName(), 'SSay');
+	`logRxPub(GetHumanReadableName()@"spawned a"@ThisActor.GetHumanReadableName());
 
 	return true;
 }
