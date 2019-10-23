@@ -19,5 +19,3 @@ Creative Mode (created by Sarah and Cynthia)
 - Copy compiled Rx_CreativeMode.u in `UDKGame/CookedPC`
 - Run local server or skirmish map with the mutator loaded.
 Example: `open CNC-Field?mutator=Rx_CreativeMode.Rx_CreativeMode`
-
-[Original repo here](https://github.com/sevans045/CreativeMode/ "Original repo here")
