@@ -22,8 +22,9 @@ simulated function class<Rx_Vehicle> GetVehicle()
 simulated function SetMaterials()
 {
 	local int i;
+	local MaterialInterface M;
 
-	For(i = 0; i < 6; i++)
+	ForEach MySVehicleMesh.SkeletalMesh.Materials(M, i)
 	{
 		MySVehicleMesh.SetMaterial(i, Mat);
 	}
