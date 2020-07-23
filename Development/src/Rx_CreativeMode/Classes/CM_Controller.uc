@@ -72,7 +72,7 @@ function AccessDenied()
 
 function TooRecent()
 {
-	CTextMessage("Your last spawn was too recent", 'Red');
+	CTextMessage("Your last command was too recent", 'Red');
 }
 
 function ResetSpawnTimer()
@@ -120,11 +120,36 @@ exec function SandboxSpawn(string ClassName)
 	ServerSandboxSpawn(ClassName);
 }
 
+exec function SandboxKillAll(optional string ClassName)
+{
+	ServerSandboxKillAll(ClassName); 
+} 
+
 exec function SandboxKillOwned(optional string ClassName)
 {
 	ServerSandboxKillOwned(ClassName); 
 	CTextMessage("Removed all your spawns", 'Green');
 } 
+
+exec function DestroyThis() 
+{ 
+	ClientDestroyThis();
+}
+
+exec function DestroyAll(string ClassName) 
+{ 
+	ServerDestroyAll(ClassName);
+}
+
+exec function ReplaceThis(string NewClass) 
+{ 
+	ClientReplace(NewClass);
+}
+
+exec function ReplaceAll(string ClassName, string NewClass) 
+{ 
+	ServerReplaceAll(ClassName, NewClass);
+}
 
 // Money Commands
 
@@ -203,6 +228,27 @@ state PlayerFlying
 exec function GiveChar(coerce string Character)
 {
 	ServerGiveChar(Character);
+}
+
+exec function GiveRefill(optional string PlayerName)
+{
+	local string errorMessage;
+	local Rx_PRI PlayerPRI;
+
+	if (Len(PlayerName) > 0)
+	{
+		PlayerPRI = ParsePlayer(PlayerName, errorMessage);
+	
+		if (PlayerPRI == None)
+   		{
+   		    CTextMessage(errorMessage, 'Red');
+   		    return;
+   		}
+
+   		ServerGiveRefill(PlayerPRI);
+	}
+	else 
+		ServerGiveRefill(Rx_PRI(PlayerReplicationInfo));
 }
 
 exec function Fly(optional string PlayerName)
@@ -287,6 +333,11 @@ exec function TogglePlayerSpawns()
    	ServerTogglePlayerSpawns();
 }
 
+exec function InfiniteAmmo()
+{
+	ClientInfiniteAmmo();
+}
+
 exec function TogglePlaceVehicle(coerce string InVehicle)
 {
 	local class<Rx_Vehicle> VehicleToPlace;
@@ -367,17 +418,46 @@ reliable server function ServerGimme(string WeaponClassStr)
 {
 	local class<Weapon> WeaponClass;
 
-	if (!PlayersCanSpawn)
+	if (!PlayersCanSpawn && !CanExecuteCommands())
 	{
 		AccessDenied();
 		return;
 	}
 
+	if (SpawnDisabled && !CanExecuteCommands())
+	{
+		TooRecent();
+		return;
+	}
+
 	WeaponClass = class<Weapon>(DynamicLoadObject(WeaponClassStr, class'Class'));
+
+	SpawnDisabled = true;
+	SetTimer(SpawnCooldown, false, 'ResetSpawnTimer');
 
 	Pawn.CreateInventory(WeaponClass);
 
 	`logRxPub(GetHumanReadableName()@"gave himself a"@WeaponClass);
+}
+
+reliable client function ClientInfiniteAmmo()
+{
+    local Rx_Weapon Wp;
+
+	if (!CanExecuteCommands())
+	{
+		AccessDenied();
+		return;
+	}
+
+    ForEach `WorldInfoObject.AllActors(class'Rx_Weapon', Wp)
+    {
+		Wp.ShotCost[0] = 0;
+		Wp.ShotCost[1] = 0;
+		Wp.bHasInfiniteAmmo = true;
+		Wp.MaxSpread = 0.01;
+    }
+    `log("INFINTE AMMO ACTIVE");
 }
 
 reliable server function ServerSandboxSpawn(string ClassName)
@@ -387,7 +467,7 @@ reliable server function ServerSandboxSpawn(string ClassName)
 	local Actor A;
 	local int i;
 
-	if (!PlayersCanSpawn)
+	if (!PlayersCanSpawn && !CanExecuteCommands())
 	{
 		AccessDenied();
 		return;
@@ -401,7 +481,7 @@ reliable server function ServerSandboxSpawn(string ClassName)
 
 	NewClass = class<Actor>(DynamicLoadObject(ClassName, class'Class'));
 
-	if (ClassIsChildOf(NewClass, class'Renx_Game.Rx_Sentinel') && !CanExecuteCommands())
+	if (ClassIsChildOf(NewClass, class'Renx_Game.Rx_Sentinel') || ClassIsChildOf(NewClass, class'Renx_Game.Rx_Defence') && !CanExecuteCommands())
 	{
 		AccessDenied();
 		return;
@@ -446,15 +526,173 @@ reliable server function ServerSandboxSpawn(string ClassName)
 	}
 }
 
+reliable client function ClientReplace(string NewClass)
+{
+	local Actor B;
+
+	if (!CanExecuteCommands())
+	{
+		AccessDenied();
+		return;
+	}
+
+	B = Rx_HUD(myHUD).TargetingBox.TargetedActor;
+	ServerReplace(NewClass, B);
+}
+
+reliable server function ServerReplace(string NewClass, Actor Target)
+{
+	local class<Actor> ReplacementClass;
+
+	if (!CanExecuteCommands())
+	{
+		AccessDenied();
+		return;
+	}
+
+	ReplacementClass = class<Actor>(DynamicLoadObject(NewClass, class'Class'));
+	`log(`showvar(ReplacementClass));
+
+	if (ReplacementClass != None)
+	{
+        	Target.Destroy();
+			ReplaceWith(Target, NewClass);
+
+			`WorldInfoObject.Game.Broadcast(None, GetHumanReadableName()@"replaced a"@Target.GetHumanReadableName(), 'SSay');
+			`logRxPub(GetHumanReadableName()@"replaced a"@Target.GetHumanReadableName()@"with a"@ReplacementClass);
+	}
+	else
+	CTextMessage("Failed to replace class with:"@NewClass);
+}
+
+reliable server function ServerReplaceAll(string ClassName, string NewClass)
+{
+	local Actor B;
+	local class<Actor> ClassToReplace;
+	local class<Actor> ReplacementClass;
+
+	if (!CanExecuteCommands())
+	{
+		AccessDenied();
+		return;
+	}
+
+	ClassToReplace = class<Actor>(DynamicLoadObject(ClassName, class'Class'));
+	`log(`showvar(ClassToReplace));
+
+	ReplacementClass = class<Actor>(DynamicLoadObject(NewClass, class'Class'));
+	`log(`showvar(ReplacementClass));
+
+	if (ClassToReplace != None && ReplacementClass != None)
+	{
+		ForEach `WorldInfoObject.AllActors(ClassToReplace, B)
+		{
+        	B.Destroy();
+        	//B.Destroyed();
+			ReplaceWith(B, NewClass);
+
+		}
+		`WorldInfoObject.Game.Broadcast(None, GetHumanReadableName()@"replaced all"@B.GetHumanReadableName()@"s", 'SSay');
+		`logRxPub(GetHumanReadableName()@"replaced all"@B.GetHumanReadableName()@"with"@ReplacementClass);
+	}
+	else
+	CTextMessage("Failed to replace:"@ClassName);
+}
+
+reliable client function ClientDestroyThis()
+{
+	local Actor B;
+
+	if (!CanExecuteCommands())
+	{
+		AccessDenied();
+		return;
+	}
+
+	B = Rx_HUD(myHUD).TargetingBox.TargetedActor;
+
+    ServerDestroyThis(B);
+}
+
+reliable server function ServerDestroyThis(Actor Target)
+{
+	if (!CanExecuteCommands())
+	{
+		AccessDenied();
+		return;
+	}
+
+    Target.Destroy();
+    //B.Destroyed();
+	`logRxPub(GetHumanReadableName()@"removed a"@Target.GetHumanReadableName());
+	CTextMessage("Removed:"@Target.GetHumanReadableName());
+}
+
+reliable server function ServerDestroyAll(string ClassName)
+{
+	local Actor B;
+	local class<Actor> ClassToDestroy;
+
+	if (!CanExecuteCommands())
+	{
+		AccessDenied();
+		return;
+	}
+
+	ClassToDestroy = class<Actor>(DynamicLoadObject(ClassName, class'Class'));
+	`log(`showvar(ClassToDestroy));
+
+
+	if (ClassToDestroy != None)
+	{
+		ForEach `WorldInfoObject.AllActors(ClassToDestroy, B)
+		{
+        	B.Destroy();
+        	//B.Destroyed();
+
+			`WorldInfoObject.Game.Broadcast(None, GetHumanReadableName()@"removed all"@B.GetHumanReadableName()@"s", 'SSay');
+			`logRxPub(GetHumanReadableName()@"removed all"@B.GetHumanReadableName()@"s");
+		}
+	}
+	else
+	CTextMessage("Failed to remove:"@ClassName);
+}
+
 reliable server function ServerSandboxKillOwned(optional string ClassName)
 {
 	local Actor A;
 
 	ForEach SpawnedActors(A) 
 	{
-		if (ClassName == "") A.Destroy();
-		else if(A.IsA(name(ClassName))) A.Destroy();
+		if (ClassName == "")
+		{
+			A.Destroy(); 
+		}
+		else if(A.IsA(name(ClassName)))
+		{
+			A.Destroy();
+		}
 	}
+}
+
+reliable server function ServerSandboxKillAll(optional string ClassName)
+{
+	local CM_Controller CMC;
+
+	if (!CanExecuteCommands())
+	{
+		AccessDenied();
+		return;
+	}
+
+	foreach WorldInfo.AllControllers(class'CM_Controller', CMC)
+	{
+		CMC.ServerSandboxKillOwned(ClassName);
+	}
+
+	CTextMessage("Removed all spawns", 'Green');
+	`WorldInfoObject.Game.Broadcast(None, GetHumanReadableName()@"removed all spawns", 'SSay');
+	`logRxPub(GetHumanReadableName()@"removed all spawns");
 }
 
 reliable server function ServerGiveCreds(Rx_PRI Receiver, optional float Credits = 25000.0)
@@ -518,11 +756,20 @@ reliable server function ServerGiveChar(string Character)
 {
 	local class<Rx_FamilyInfo> FamClass;
 
-	if (!PlayersCanSpawn)
+	if (!PlayersCanSpawn && !CanExecuteCommands())
 	{
 		AccessDenied();
 		return;
 	}
+
+	if (SpawnDisabled && !CanExecuteCommands())
+	{
+		TooRecent();
+		return;
+	}
+
+	SpawnDisabled = true;
+	SetTimer(SpawnCooldown, false, 'ResetSpawnTimer');
 
 	FamClass = class<Rx_FamilyInfo>(DynamicLoadObject(Character, class'Class'));
 
@@ -535,7 +782,7 @@ reliable server function ServerFly(Rx_PRI Receiver)
 {
 	local Rx_Controller C;
 
-	if (!CanExecuteCommands())
+	if (Receiver != Rx_PRI(PlayerReplicationInfo) && !CanExecuteCommands() || !PlayersCanSpawn && !CanExecuteCommands())
 	{
 		AccessDenied();
 		return;
@@ -555,7 +802,7 @@ reliable server function ServerWalk(Rx_PRI Receiver)
 {
 	local Rx_Controller C;
 
-	if (!CanExecuteCommands())
+	if (Receiver != Rx_PRI(PlayerReplicationInfo) && !CanExecuteCommands() || !PlayersCanSpawn && !CanExecuteCommands())
 	{
 		AccessDenied();
 		return;
@@ -575,7 +822,7 @@ reliable server function ServerGiveGod(Rx_PRI Receiver)
 {
 	local Rx_Controller C;
 
-	if (!CanExecuteCommands())
+	if (Receiver != Rx_PRI(PlayerReplicationInfo) && !CanExecuteCommands() || !PlayersCanSpawn && !CanExecuteCommands())
 	{
 		AccessDenied();
 		return;
@@ -639,7 +886,7 @@ reliable server function ServerDestroyDefences()
 		DefCon.Destroy();
 
 	ForEach `WorldInfoObject.AllActors(class'Rx_Building_Defense', AdvDef)
-		Rx_Building_Team_Internals(AdvDef.BuildingInternals).PowerLost();
+		Rx_Building_Team_Internals(AdvDef.BuildingInternals).PowerLost(true);
 
 	CTextMessage("Disabled all defences", 'Green');
 	`WorldInfoObject.Game.Broadcast(None, GetHumanReadableName()@"disabled base defences", 'SSay');	
@@ -684,10 +931,14 @@ reliable server function ServerRestoreBuildings()
 
 	ForEach `WorldInfoObject.AllActors(class'Rx_Building_Team_Internals', BuildingInternals)
 	{
+		BuildingInternals.Health=BuildingInternals.TrueHealthMax;
+		BuildingInternals.Armor=BuildingInternals.TrueHealthMax;
+
+        BuildingInternals.DamageLodLevel = BuildingInternals.GetBuildingHealthLod();
+		BuildingInternals.ChangeDamageLodLevel(BuildingInternals.GetBuildingHealthLod());
+
 		if(BuildingInternals.IsDestroyed() || BuildingInternals.bNoPower)
 		{
-			BuildingInternals.Health=BuildingInternals.TrueHealthMax;
-			BuildingInternals.Armor=BuildingInternals.TrueHealthMax;
 			BuildingInternals.bDestroyed=false;
 			BuildingInternals.PowerRestore();
 		}
@@ -703,7 +954,41 @@ reliable server function bool ServerAttemptActorSpawn(class<Rx_Vehicle> VehicleT
 {
 	local Actor ThisActor;
 
-	if (!PlayersCanSpawn)
+	if (!PlayersCanSpawn && !CanExecuteCommands())
+	{
+		AccessDenied();
+		return false;
+	}
+
+	if (SpawnDisabled && !CanExecuteCommands())
+	{
+		TooRecent();
+		return false;
+	}
+
+	if (ClassIsChildOf(VehicleToSpawn, class'Renx_Game.Rx_Defence') && !CanExecuteCommands())
+	{
+		AccessDenied();
+		return false;
+	}
+
+	SpawnDisabled = true;
+	SetTimer(SpawnCooldown, false, 'ResetSpawnTimer');
+
+	ThisActor = spawn(VehicleToSpawn, None,,VLocation,VRotation);
+	SpawnedActors.AddItem(ThisActor);
+	UTVehicle(ThisActor).Mesh.WakeRigidBody();
+	UTVehicle(ThisActor).SetTeamNum(GetTeamNum());
+
+	`WorldInfoObject.Game.Broadcast(None, GetHumanReadableName()@"spawned a"@ThisActor.GetHumanReadableName(), 'SSay');
+	`logRxPub(GetHumanReadableName()@"spawned a"@ThisActor.GetHumanReadableName());
+
+	return true;
+}
+
+reliable server function bool ServerGiveRefill(Rx_PRI Receiver)
+{
+	if (Receiver != Rx_PRI(PlayerReplicationInfo) && !CanExecuteCommands() || !PlayersCanSpawn && !CanExecuteCommands())
 	{
 		AccessDenied();
 		return false;
@@ -718,14 +1003,39 @@ reliable server function bool ServerAttemptActorSpawn(class<Rx_Vehicle> VehicleT
 	SpawnDisabled = true;
 	SetTimer(SpawnCooldown, false, 'ResetSpawnTimer');
 
-	ThisActor = spawn(VehicleToSpawn, None,,VLocation,VRotation);
-	UTVehicle(ThisActor).Mesh.WakeRigidBody();
-	UTVehicle(ThisActor).SetTeamNum(GetTeamNum());
+	Rx_Game(WorldInfo.Game).GetPurchaseSystem().PerformRefill(Rx_Controller(Receiver.Owner));
 
-	`WorldInfoObject.Game.Broadcast(None, GetHumanReadableName()@"spawned a"@ThisActor.GetHumanReadableName(), 'SSay');
-	`logRxPub(GetHumanReadableName()@"spawned a"@ThisActor.GetHumanReadableName());
+	`WorldInfoObject.Game.Broadcast(None, Receiver.Owner.GetHumanReadableName()@"got refilled.", 'SSay');
+	`logRxPub(Receiver.Owner.GetHumanReadableName()@"got refilled by"@GetHumanReadableName());
 
 	return true;
+}
+
+reliable server function bool ReplaceWith(actor Other, string aClassName)
+{
+    local Actor A;
+    local class<Actor> aClass;
+    local PickupFactory OldFactory, NewFactory;
+
+    if ( aClassName == "" )
+        return true;
+
+    aClass = class<Actor>(DynamicLoadObject(aClassName, class'Class'));
+    if ( aClass != None )
+    {
+        A = Spawn(aClass,Other.Owner,,Other.Location, Other.Rotation);
+        if (A != None)
+        {
+            OldFactory = PickupFactory(Other);
+            NewFactory = PickupFactory(A);
+            if (OldFactory != None && NewFactory != None)
+            {
+                OldFactory.ReplacementFactory = NewFactory;
+                NewFactory.OriginalFactory = OldFactory;
+            }
+        }
+    }
+    return ( A != None );
 }
 
 DefaultProperties

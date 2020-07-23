@@ -27,7 +27,13 @@ function bool CheckReplacement(Actor Other)
 		Rx_Game(`WorldInfoObject.Game).HudClass = class'CM_HUD';
 		Rx_Game(`WorldInfoObject.Game).PlayerControllerClass = class'CM_Controller';
 	}
-
+/*
+    if (Rx_PRI(Rx_Weapon(Other).Instigator.PlayerReplicationInfo).bAdmin)
+    {
+            Rx_Weapon(Other).ShotCost[0] = 0;
+            Rx_Weapon(Other).ShotCost[1] = 0;
+    }
+*/
 	return true;
 }
 

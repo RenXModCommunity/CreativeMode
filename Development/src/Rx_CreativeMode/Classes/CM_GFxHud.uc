@@ -12,6 +12,7 @@ var GFxClikWidget LockHPButton;
 var GFxClikWidget KillDefsButton;
 var GFxClikWidget RestoreBuildsButton;
 var GFxClikWidget ClearSpawnsButton;
+var GFxClikWidget RefillButton;
 
 var GameViewportClient VPC;
 var CM_Controller PlayerOwner;
@@ -115,10 +116,19 @@ function OnWepScrollListChange(GFxClikWidget.EventData ev)
 
 function OnDefScrollListChange(GFxClikWidget.EventData ev) 
 {
+	local class<Rx_Defence> DefenseToSpawn;
+	local name Package;
+
+	if (DefScrollList.GetInt("selectedIndex") == -1) return;
+
 	if (PlayerOwner != None)
 	{
-		//PlayerOwner.TogglePlaceActor(CMHUD.Defenses[DefScrollList.GetInt("selectedIndex")]);
-	}
+		DefenseToSpawn = CMHUD.Defenses[DefScrollList.GetInt("selectedIndex")];
+		Package = CMHUD.DefensePackages[DefScrollList.GetInt("selectedIndex")];
+
+		PlayerOwner.TogglePlaceVehicle(Package$"."$DefenseToSpawn.name);
+		OnCommandRun();
+	}		
 }
 
 function OnGodButtonPress(GFxClikWidget.EventData ev)
@@ -189,6 +199,15 @@ function OnRestoreBuildsButtonPress(GFxClikWidget.EventData ev)
 	if (PlayerOwner != None)
 	{
 		PlayerOwner.RestoreBuildings();
+		OnCommandRun();
+	}
+}
+
+function OnRefillButtonPress(GFxClikWidget.EventData ev)
+{
+	if (PlayerOwner != None)
+	{
+		PlayerOwner.GiveRefill();
 		OnCommandRun();
 	}
 }
@@ -306,6 +325,13 @@ event bool WidgetInitialized(name WidgetName, name WidgetPath, GFxObject Widget)
 			RestoreBuildsButton.AddEventListener('CLIK_buttonClick', OnRestoreBuildsButtonPress);
 			bWasHandled = true;
 		break;
+		case 'RefillButton':
+			if (RefillButton == none || RefillButton != Widget)
+				RefillButton = GFxClikWidget(Widget);
+
+			RefillButton.AddEventListener('CLIK_buttonClick', OnRefillButtonPress);
+			bWasHandled = true;
+		break;
 	}
 
 	return bWasHandled;
@@ -314,6 +340,8 @@ event bool WidgetInitialized(name WidgetName, name WidgetPath, GFxObject Widget)
 function RepopMenu()
 {
 	SetUpDataProvider(WepScrollList);
+	SetUpDataProvider(VehScrollList);
+	SetUpDataProvider(DefScrollList);
 }
 
 function SetUpDataProvider(GFxObject Widget)
@@ -432,7 +460,7 @@ DefaultProperties
 	WidgetBindings.Add((WidgetName="VehScrollList",WidgetClass=class'GFxClikWidget'))
 	WidgetBindings.Add((WidgetName="InfScrollList",WidgetClass=class'GFxClikWidget'))
 	WidgetBindings.Add((WidgetName="WepScrollList",WidgetClass=class'GFxClikWidget'))
-	WidgetBindings.Add((WidgetName="DefScrollList",WidgetClass=class'GFxClikWidget')))
+	WidgetBindings.Add((WidgetName="DefScrollList",WidgetClass=class'GFxClikWidget'))
 	WidgetBindings.Add((WidgetName="GodButton",WidgetClass=class'GFxClikWidget'))
 	WidgetBindings.Add((WidgetName="FlyButton",WidgetClass=class'GFxClikWidget'))
 	WidgetBindings.Add((WidgetName="WalkButton",WidgetClass=class'GFxClikWidget'))
@@ -441,4 +469,5 @@ DefaultProperties
 	WidgetBindings.Add((WidgetName="KillDefsButton",WidgetClass=class'GFxClikWidget'))
 	WidgetBindings.Add((WidgetName="ClearSpawnsButton",WidgetClass=class'GFxClikWidget'))
 	WidgetBindings.Add((WidgetName="RestoreBuildsButton",WidgetClass=class'GFxClikWidget'))
+	WidgetBindings.Add((WidgetName="RefillButton",WidgetClass=class'GFxClikWidget'))
 }
