@@ -1,4 +1,4 @@
-class CM_GFxHud extends GFxMoviePlayer;
+class CM_GFxHudNvN extends GFxMoviePlayer;
 
 var GFxClikWidget VehScrollList;
 var GFxClikWidget WepScrollList;
@@ -15,17 +15,16 @@ var GFxClikWidget ClearSpawnsButton;
 var GFxClikWidget RefillButton;
 
 var GameViewportClient VPC;
-var CM_Controller PlayerOwner;
-var CM_HUD CMHUD;
-var CM_HUDNvN CMHUDNvN;
+var CM_ControllerNvN PlayerOwner;
+var CM_HUDNvN CMHUD;
 
 function Init(optional LocalPlayer LocPlay)
 {
 	//Start();
 	Advance(0.f);
 
-	PlayerOwner = CM_Controller(GetPC());
-	CMHUD = CM_HUD(PlayerOwner.myHUD);
+	PlayerOwner = CM_ControllerNvN(GetPC());
+	CMHUD = CM_HUDNvN(PlayerOwner.myHUD);
 }
 
 function TickHUD()
