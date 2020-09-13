@@ -97,6 +97,7 @@ function PopulateVehicleMenu()
 
     	if (i != -1)
     		Vehicles.Remove(i, 1);
+    		VehiclePackages.Remove(i, 1);
     }
 }
 
@@ -132,6 +133,7 @@ function PopulateWeaponMenu()
 
     	if (i != -1)
     		Weapons.Remove(i, 1);
+    		WeaponPackages.Remove(i, 1);
     }
 }
 
@@ -164,6 +166,7 @@ function PopulateInfantryMenu()
 
     	if (i != -1)
     		Infantry.Remove(i, 1);
+    		InfantryPackages.Remove(i, 1);
     }
 }
 
@@ -196,6 +199,7 @@ function PopulateDefenseMenu()
 
     	if (i != -1)
     		Defenses.Remove(i, 1);
+    		DefensePackages.Remove(i, 1);
     }
 }
 
