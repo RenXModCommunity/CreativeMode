@@ -371,7 +371,7 @@ function SetUpDataProvider(GFxObject Widget)
 				ForEach CMHUD.Vehicles(V, i)
 				{
 					TempObj = CreateObject("Object");
-					TempObj.SetString("mapName", ""$V);
+					TempObj.SetString("mapName", ""$V.default.VehicleNameString);
 
 					DataProvider.SetElementObject(i, TempObj);
 				}
@@ -392,7 +392,7 @@ function SetUpDataProvider(GFxObject Widget)
 				ForEach CMHUD.Weapons(W, i)
 				{
 					TempObj = CreateObject("Object");
-					TempObj.SetString("mapName", ""$W);
+					TempObj.SetString("mapName", ""$W.default.ItemName);
 
 					DataProvider.SetElementObject(i, TempObj);
 				}
@@ -413,7 +413,7 @@ function SetUpDataProvider(GFxObject Widget)
 				ForEach CMHUD.Infantry(F, i)
 				{
 					TempObj = CreateObject("Object");
-					TempObj.SetString("mapName", ""$F);
+					TempObj.SetString("mapName", ""$F.default.CharacterName);
 
 					DataProvider.SetElementObject(i, TempObj);
 				}
@@ -434,7 +434,7 @@ function SetUpDataProvider(GFxObject Widget)
 				ForEach CMHUD.Defenses(D, i)
 				{
 					TempObj = CreateObject("Object");
-					TempObj.SetString("mapName", ""$D);
+					TempObj.SetString("mapName", ""$D.default.VehicleNameString);
 
 					DataProvider.SetElementObject(i, TempObj);
 				}

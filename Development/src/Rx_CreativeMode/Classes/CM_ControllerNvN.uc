@@ -538,8 +538,10 @@ reliable client function ClientReplace(string NewClass)
 		return;
 	}
 
-	B = Rx_HUD(myHUD).TargetingBox.TargetedActor;
-	ServerReplace(NewClass, B);
+	B = Rx_HUD(myHUD).TargetingBox.TargetedActor.GetActualTarget();
+
+	if (B != None)	
+	  ServerReplace(NewClass, B);
 }
 
 reliable server function ServerReplace(string NewClass, Actor Target)
@@ -611,9 +613,10 @@ reliable client function ClientDestroyThis()
 		return;
 	}
 
-	B = Rx_HUD(myHUD).TargetingBox.TargetedActor;
+	B = Rx_HUD(myHUD).TargetingBox.TargetedActor.GetActualTarget();
 
-    ServerDestroyThis(B);
+	if (B != None)
+  	  ServerDestroyThis(B);
 }
 
 reliable server function ServerDestroyThis(Actor Target)
@@ -897,10 +900,9 @@ reliable server function ServerDestroyDefences()
 
 reliable server function ServerRestoreBuildings()
 {
+	local Rx_Building B;
 	local Rx_Building_Team_Internals BuildingInternals;
-	local Rx_Building_Refinery_GDI_Internals GDI_Ref;
-	local Rx_Building_Refinery_Nod_Internals Nod_Ref;
-
+	local Rx_VehicleManager VM;
 
 	if (!CanExecuteCommands())
 	{
@@ -908,27 +910,24 @@ reliable server function ServerRestoreBuildings()
 		return;
 	}
 
-	Rx_Game(WorldInfo.Game).GetVehicleManager().bGDIRefDestroyed=false;
-	Rx_Game(WorldInfo.Game).GetVehicleManager().bNodRefDestroyed=false;
-	Rx_Game(WorldInfo.Game).GetVehicleManager().bNodIsUsingAirdrops=false;
-	Rx_Game(WorldInfo.Game).GetVehicleManager().bGDIIsUsingAirdrops=false;
-	Rx_Game(WorldInfo.Game).GetVehicleManager().NodAdditionalAirdropProductionDelay=0;
-	Rx_Game(WorldInfo.Game).GetVehicleManager().GDIAdditionalAirdropProductionDelay=0;
+	VM = Rx_Game(WorldInfo.Game).GetVehicleManager();
 
-	ForEach `WorldInfoObject.AllActors(class'Rx_Building_Refinery_GDI_Internals', GDI_Ref)
-	{
-		if(GDI_Ref.IsDestroyed())
-		{
-			Rx_Game(WorldInfo.Game).GetVehicleManager().QueueHarvester(TEAM_GDI, false);
-		}
-	}
+	// Resetting any value in Vehicle Manager
+	VM.bGDIRefDestroyed=false;
+	VM.bNodRefDestroyed=false;
+	VM.bNodIsUsingAirdrops=false;
+	VM.bGDIIsUsingAirdrops=false;
+	VM.NodAdditionalAirdropProductionDelay=0;
+	VM.GDIAdditionalAirdropProductionDelay=0;
 
-	ForEach `WorldInfoObject.AllActors(class'Rx_Building_Refinery_Nod_Internals', Nod_Ref)
+	// Queuing harvesters for dead refineries
+	ForEach `WorldInfoObject.AllActors(class'Rx_Building', B, class'RxIfc_Refinery')
 	{
-		if(Nod_Ref.IsDestroyed())
-		{
-			Rx_Game(WorldInfo.Game).GetVehicleManager().QueueHarvester(TEAM_Nod, false);
-		}
+  		if(RxIfc_Refinery(B).ShouldSpawnHarvester() && B.IsDestroyed())
+  		{
+  			Rx_Building_Refinery_Internals(B.BuildingInternals).bDestroyed=false;
+  			VM.QueueHarvester(RxIfc_Refinery(B),false);
+  		}
 	}
 
 	ForEach `WorldInfoObject.AllActors(class'Rx_Building_Team_Internals', BuildingInternals)
@@ -945,7 +944,6 @@ reliable server function ServerRestoreBuildings()
 			BuildingInternals.PowerRestore();
 		}
 	}
-
 
 	CTextMessage("Buildings restored", 'Green');
 	`WorldInfoObject.Game.Broadcast(None, GetHumanReadableName()@"restored all buildings.", 'SSay');
