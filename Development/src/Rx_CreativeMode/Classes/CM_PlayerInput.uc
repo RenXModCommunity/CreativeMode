@@ -22,14 +22,14 @@ function bool InputKey(int ControllerId, name Key, EInputEvent Event, float Amou
 		return true;
 	}
 
-	if (Key == 'LeftMouseButton' && Event == IE_Pressed && pcNvN.PActor != None)
+	if (pcNvN != None && Key == 'LeftMouseButton' && Event == IE_Pressed && pcNvN.PActor != None)
 	{
 		pcNvN.AttemptSpawn();
 
 		return true;
 	}
 
-	if (Key == 'RightMouseButton' && Event == IE_Pressed && pcNvN.PActor != None)
+	if (pcNvN != None && Key == 'RightMouseButton' && Event == IE_Pressed && pcNvN.PActor != None)
 	{
 		pcNvN.ExitSpawnMode();
 

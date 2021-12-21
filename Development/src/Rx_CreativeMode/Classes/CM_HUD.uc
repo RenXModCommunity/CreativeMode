@@ -1,7 +1,6 @@
 class CM_HUD extends Rx_HUD;
 
 var int DefaultTargettingRangex, pageNum;
-var privatewrite CM_HUDC AdminHud;
 var bool OpenMenu;
 
 var bool bDrawFPSMenu;
@@ -42,9 +41,7 @@ simulated event PostBeginPlay()
     AllClasses.Remove(0, 1);
 
     ForEach AllClasses(s, i)
-    {
         AllClasses[i] = Left(AllClasses[i], InStr(AllClasses[i], ".NetIndex ="));
-    }
 
     PopulateVehicleMenu();
 
@@ -65,6 +62,13 @@ event PostRender()
 
 	if (CMMovie != None && OpenMenu)
 		CMMovie.TickHud();
+
+	if (CM_Controller(PlayerOwner).PActor != None)
+	{
+		Canvas.SetPos(Canvas.ClipX * 0.475,Canvas.ClipY * 0.55);
+		Canvas.SetDrawColor(255, 255, 255);
+		Canvas.DrawText("Place | Cancel",,);
+	}
 }
 
 function PopulateVehicleMenu()
@@ -87,17 +91,21 @@ function PopulateVehicleMenu()
         VehiclePackages.AddItem(NewClass.GetPackageName());
 
         if (!ClassIsChildOf(NewClass, class'Renx_Game.Rx_Defence'))
-        Vehicles.AddItem(NewClass);
-        `log(">> CM_Hud: Added"@NewClass@"to the Vehicles list");
+        {
+        	`log(">> CM_Hud: Added"@NewClass@"to the Vehicles list");
+            Vehicles.AddItem(NewClass);
+        }
     }
 
     ForEach OmittedVehicles(V, i)
     {
     	i = Vehicles.Find(V);
 
-    	if (i != -1)
+    	if (i != INDEX_NONE)
+    	{
     		Vehicles.Remove(i, 1);
     		VehiclePackages.Remove(i, 1);
+    	}
     }
 }
 
@@ -120,9 +128,6 @@ function PopulateWeaponMenu()
         	continue;
 
         WeaponPackages.AddItem(NewClass.GetPackageName());
-
-        //`log(NewClass);
-
         Weapons.AddItem(NewClass);
         `log(">> CM_Hud: Added"@NewClass@"to the Weapons list");
     }
@@ -131,9 +136,11 @@ function PopulateWeaponMenu()
     {
     	i = Weapons.Find(W);
 
-    	if (i != -1)
+    	if (i != INDEX_NONE)
+    	{
     		Weapons.Remove(i, 1);
     		WeaponPackages.Remove(i, 1);
+    	}
     }
 }
 
@@ -155,7 +162,6 @@ function PopulateInfantryMenu()
         	continue;
 
         InfantryPackages.AddItem(NewClass.GetPackageName());
-
         Infantry.AddItem(NewClass);
 		`log(">> CM_Hud: Added"@NewClass@"to the Infatry list");
     }
@@ -164,9 +170,11 @@ function PopulateInfantryMenu()
     {
     	i = Infantry.Find(F);
 
-    	if (i != -1)
+    	if (i != INDEX_NONE)
+    	{
     		Infantry.Remove(i, 1);
     		InfantryPackages.Remove(i, 1);
+    	}
     }
 }
 
@@ -197,9 +205,11 @@ function PopulateDefenseMenu()
     {
     	i = Defenses.Find(D);
 
-    	if (i != -1)
+    	if (i != INDEX_NONE)
+    	{
     		Defenses.Remove(i, 1);
     		DefensePackages.Remove(i, 1);
+    	}
     }
 }
 
@@ -403,26 +413,6 @@ function ToggleMenu()
 function DoAction(string Key)
 {
 
-}
-
-function CreateHudCompoenents()
-{
-	Super.CreateHudCompoenents();
-	AdminHud = New class'CM_HUDC';
-}
-
-function UpdateHudCompoenents(float DeltaTime, Rx_HUD HUD)
-{
-	Super.UpdateHudCompoenents(DeltaTime, HUD);
-	if (DrawTargetBox) AdminHud.Update(DeltaTime, HUD);
-	if (Rx_Controller(PlayerOwner).Vet_Menu != none) Rx_Controller(PlayerOwner).Vet_Menu.UpdateTiles(DeltaTime, HUD);
-}
-
-function DrawHudCompoenents()
-{
-	Super.DrawHudCompoenents();	
-	if (DrawTargetBox && bDrawFPSMenu) AdminHud.Draw();
-	if (Rx_Controller(PlayerOwner).Vet_Menu != none) Rx_Controller(PlayerOwner).Vet_Menu.DrawTiles(self);
 }
 
 DefaultProperties
