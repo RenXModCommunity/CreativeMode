@@ -11,18 +11,24 @@ var privatewrite bool SpawnDisabled;
 
 var privatewrite CM_PlaceVehicle PActor;
 
+var bool bRecentlyMsged;
+
 // Helper & misc. functions
 
 event PlayerTick(float DeltaTime)
 {
-	local vector ViewPoint;
-	local rotator desiredRot;
+	local vector StartTrace, EndTrace, Aim, HitNormal, HitLocation;
+	local rotator desiredRot, AimRot;
 
 	super.PlayerTick(DeltaTime);
 
-	// Find where we are looking and move the PActor with it.
-	ViewPoint = GetHUDAim();
-	ViewPoint.Z += 150;
+	GetPlayerViewPoint( StartTrace, AimRot );
+	Aim = vector(AimRot);
+	StartTrace=StartTrace+Aim*150; 
+	EndTrace = StartTrace + Aim * 10000;
+	Trace(HitLocation, HitNormal, EndTrace, StartTrace, true,,, TRACEFLAG_Bullet);
+
+	HitLocation.Z += 150;
 
 	// Always set the PActor to 0,0,0 rotation, so it will always be level with a flat surface.
 	desiredRot.Roll = 0;
@@ -31,9 +37,26 @@ event PlayerTick(float DeltaTime)
 
 	if (PActor != None)
 	{
-		PActor.SetLocation(ViewPoint);
+		PActor.SetLocation(HitLocation);
 		PActor.SetRotation(desiredRot);
 	}
+}
+
+function AcknowledgePossession(Pawn P)
+{
+	Super.AcknowledgePossession(P);
+
+	if (LocalPlayer(Player) != None && !bRecentlyMsged)
+	{
+		bRecentlyMsged = true;
+		CTextMessage("Press B to open Creative menu");
+		SetTimer(5.0f, true, nameof(ResetMsg));
+	}
+}
+
+function ResetMsg()
+{
+	bRecentlyMsged = false;
 }
 
 function AddToKeyString(coerce string KeyInput)
@@ -437,7 +460,7 @@ reliable server function ServerGimme(string WeaponClassStr)
 
 	Pawn.CreateInventory(WeaponClass);
 
-	`logRxPub(GetHumanReadableName()@"gave himself a"@WeaponClass);
+	`logRxPub(GetHumanReadableName()@"gave themself a"@WeaponClass);
 }
 
 reliable client function ClientInfiniteAmmo()
@@ -457,7 +480,6 @@ reliable client function ClientInfiniteAmmo()
 		Wp.bHasInfiniteAmmo = true;
 		Wp.MaxSpread = 0.01;
     }
-    `log("INFINTE AMMO ACTIVE");
 }
 
 reliable server function ServerSandboxSpawn(string ClassName)

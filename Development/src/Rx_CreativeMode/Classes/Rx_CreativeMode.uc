@@ -1,7 +1,5 @@
 class Rx_CreativeMode extends Rx_Mutator;
 
-var private CM_ServerFPS SystemMutator;
-
 function PostBeginPlay()
 {
 	Super.PostBeginPlay();
@@ -41,11 +39,5 @@ function bool CheckReplacement(Actor Other)
 
 function InitMutator(string Options, out string ErrorMessage)
 {
-    SystemMutator = Spawn(class'CM_ServerFPS');
-}
-
-simulated function Tick(float DeltaTime)
-{
-    if (SystemMutator != None)
-        SystemMutator.OnTick(DeltaTime);
+    
 }

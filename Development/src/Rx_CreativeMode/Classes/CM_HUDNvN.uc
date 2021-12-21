@@ -3,7 +3,6 @@ class CM_HUDNvN extends S_HUD;
 //Identical to CM_HUD besides NvN specific classes
 
 var int DefaultTargettingRangex, pageNum;
-var privatewrite CM_HUDC AdminHud;
 var bool OpenMenu;
 
 var bool bDrawFPSMenu;
@@ -405,26 +404,6 @@ function ToggleMenu()
 function DoAction(string Key)
 {
 
-}
-
-function CreateHudCompoenents()
-{
-	Super.CreateHudCompoenents();
-	AdminHud = New class'CM_HUDC';
-}
-
-function UpdateHudCompoenents(float DeltaTime, Rx_HUD HUD)
-{
-	Super.UpdateHudCompoenents(DeltaTime, HUD);
-	if (DrawTargetBox) AdminHud.Update(DeltaTime, HUD);
-	if (Rx_Controller(PlayerOwner).Vet_Menu != none) Rx_Controller(PlayerOwner).Vet_Menu.UpdateTiles(DeltaTime, HUD);
-}
-
-function DrawHudCompoenents()
-{
-	Super.DrawHudCompoenents();	
-	if (DrawTargetBox && bDrawFPSMenu) AdminHud.Draw();
-	if (Rx_Controller(PlayerOwner).Vet_Menu != none) Rx_Controller(PlayerOwner).Vet_Menu.DrawTiles(self);
 }
 
 DefaultProperties
